@@ -101,7 +101,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = () => {
       </div>
       <div className="w-4/5 p-4">
         <div className="flex justify-between items-center">
-          <div className="text-gray-700 font-bold text-2xl">Students</div>
+          <div className="text-gray-700 font-bold text-2xl">Dashboard</div>
           <Image
             src="/exit-gate.png"
             alt="Exit"
