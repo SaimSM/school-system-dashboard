@@ -1,9 +1,20 @@
 "use client";
 import Image from "next/image";
 import { useState } from "react";
+import { useRouter } from 'next/navigation';
+
 
 export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
+  const router = useRouter();
+
+
+  const handleLogin = () => {
+    // Perform login validation here (e.g., API call or form validation)
+
+    // Redirect to the dashboard on successful login
+    router.push('/Dashboard');
+  };
 
   // Toggle the password visibility
   const togglePasswordVisibility = () => {
@@ -37,6 +48,11 @@ export default function Login() {
           </div>
 
           {/* Email Input */}
+          <form  onSubmit={(e) => {
+            e.preventDefault();
+            handleLogin();
+          }}
+          >
           <div className="mb-6">
             <label
               htmlFor="email"
@@ -94,6 +110,7 @@ export default function Login() {
           <button className="w-full bg-blue-500 text-white py-2 rounded-lg hover:bg-blue-600 transition duration-300">
             Login
           </button>
+          </form>
         </div>
       </div>
     </div>

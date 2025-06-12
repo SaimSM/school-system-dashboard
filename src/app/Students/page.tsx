@@ -1,155 +1,256 @@
 "use client";
-import React from "react";
-import Image from "next/image";
-import Link from "next/link";
+import Layout from "../components/Navbar";
+import { PencilIcon } from '@heroicons/react/20/solid';
+import { useState, useEffect } from "react";
 
+// Define Student type
 interface Student {
+  id: number;
   name: string;
-  id: string;
+  studentId: string;
+  password?: string;
   class: string;
   guardianEmail: string;
-  guardianMobileNo: string;
+  guardianMobile: string;
 }
 
-const students: Student[] = Array.from({ length: 10 }).map((_, index) => ({
-  name: "Muhammad Ali Arshad",
-  id: `Std-00${index + 1}`,
-  class: "5",
-  guardianEmail: "md123@gmail.com",
-  guardianMobileNo: "032154791",
-}));
+const API_BASE = "http://localhost/student-dashboard-api";
 
 const Students: React.FC = () => {
-  return (
-    <div className="flex h-screen overflow-hidden">
-      {/* Sidebar */}
-      <div
-        className="w-1/5 p-4 flex flex-col items-center justify-center"
-        style={{
-          background:
-            "linear-gradient(178.4deg, rgba(78, 116, 249, 0.74) 22.77%, rgba(185, 22, 218, 0.4218) 99%)",
-        }}
-      >
-        {/* Logo */}
-        <div className="flex items-center justify-center mb-8">
-          <Image src="/book.png" alt="Book" width={24} height={24} />
-          <div className="text-white font-bold text-2xl ml-2">EduHub</div>
-        </div>
+  // 1) students is always an array
+  const [students, setStudents] = useState<Student[]>([]);
+  const [isFormOpen, setIsFormOpen] = useState(false);
 
-        {/* Links */}
-        <div className="flex flex-col items-center w-full space-y-4">
-          {[
-            { name: "Dashboard", active: false },
-            { name: "Students", active: true },
-            { name: "Teachers", active: false },
-            { name: "Courses", active: false },
-            { name: "Classes", active: false },
-          ].map((option) => (
-            <button
-              key={option.name}
-              className={`px-4 py-2 w-4/5 text-left text-lg text-white ${
-                option.active
-                  ? "bg-black rounded-md"
-                  : "hover:bg-black hover:rounded-md"
-              }`}
-            >
-              <Link href={`/${option.name.toLowerCase()}`}>{option.name}</Link>
-            </button>
-          ))}
-        </div>
+  // Simplify formData typing
+  type FormData = Omit<Student, 'id'> & { id?: number | '' };
+  const [formData, setFormData] = useState<FormData>({
+    id: '',
+    name: '',
+    studentId: '',
+    password: '',
+    class: '',
+    guardianEmail: '',
+    guardianMobile: '',
+  });
+
+  // Fetch students on mount
+  useEffect(() => {
+    fetchStudents();
+  }, []);
+
+  const fetchStudents = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/read.php`);
+      const data = await res.json();
+      setStudents(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error("Error fetching students:", err);
+    }
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const method = formData.id ? "PUT" : "POST";
+      const url = formData.id ? `${API_BASE}${formData.id}/` : API_BASE;
+      const payload = { ...formData };
+      if (!formData.id) delete (payload as any).id;
+
+      const res = await fetch(url, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      if (res.ok) {
+        fetchStudents();
+        setIsFormOpen(false);
+        setFormData({ id: '', name: '', studentId: '', password: '', class: '', guardianEmail: '', guardianMobile: '' });
+      } else {
+        console.error("Submit error:", await res.text());
+      }
+    } catch (err) {
+      console.error("Error submitting form:", err);
+    }
+  };
+
+  const handleEdit = (stu: Student) => {
+    setFormData({
+      id: stu.id,
+      name: stu.name,
+      studentId: stu.studentId,
+      password: '',
+      class: stu.class,
+      guardianEmail: stu.guardianEmail,
+      guardianMobile: stu.guardianMobile,
+    });
+    setIsFormOpen(true);
+  };
+
+  const handleDelete = async (id: number) => {
+    if (!confirm("Are you sure you want to delete this student?")) return;
+    try {
+      const res = await fetch(`${API_BASE}${id}/`, { method: "DELETE" });
+      if (res.ok) fetchStudents();
+      else console.error("Delete error:", await res.text());
+    } catch (err) {
+      console.error("Error deleting student:", err);
+    }
+  };
+
+  return (
+    <Layout>
+      <div className="flex justify-between items-center -mt-2">
+        <h2 className="text-gray-700 font-bold text-2xl">Students</h2>
       </div>
 
-      {/* Main Content */}
-      <main className="w-4/5 p-6 flex flex-col">
-        <div className="flex justify-between items-center mb-6">
-          {/* Heading */}
-          <h2 className="text-2xl font-bold">Students</h2>
-          {/* Add Students Button */}
+      {/* Add button */}
+      {!isFormOpen && (
+        <div className="flex justify-end -mt-2 mb-2">
           <button
-            className="bg-purple-500 text-white px-6 py-2 rounded-md shadow hover:bg-purple-600"
-            style={{
-              background:
-                "linear-gradient(178.4deg, rgba(78, 116, 249, 0.74) 22.77%, rgba(185, 22, 218, 0.4218) 99%)",
-            }}
+            className="bg-purple-500 text-white px-4 py-2 rounded-md shadow hover:bg-purple-600"
+            onClick={() => setIsFormOpen(true)}
           >
-            <Link href="/FormStudent1">Add Students +</Link>
+            Add Student +
           </button>
         </div>
+      )}
 
-        {/* Students Table */}
-        <div className="bg-white shadow-md rounded-lg overflow-hidden flex-grow">
-          <table className="w-full bg-white">
-            <thead>
-              <tr className="bg-gray-100">
-                <th className="py-3 px-4 border-b text-left">Student Name</th>
-                <th className="py-3 px-4 border-b text-left">Student ID</th>
-                <th className="py-3 px-4 border-b text-left">Class</th>
-                <th className="py-3 px-4 border-b text-left">Guardian Email</th>
-                <th className="py-3 px-4 border-b text-left">
-                  Guardian Mobile No
-                </th>
-                <th className="py-3 px-4 border-b text-left">Action</th>
+      {/* Student Table */}
+      <div className="bg-white rounded shadow mt-1">
+        <table className="w-full table-auto border-collapse">
+          <thead>
+            <tr>
+              <th className="px-4 py-2 text-left">Name</th>
+              <th className="px-4 py-2 text-left">Student ID</th>
+              <th className="px-4 py-2 text-left">Class</th>
+              <th className="px-4 py-2 text-left">Guardian Email</th>
+              <th className="px-4 py-2 text-left">Guardian Mobile</th>
+              <th className="px-4 py-2 text-center">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {students.map((stu) => (
+              <tr key={stu.id} className="border-t">
+                <td className="px-4 py-2">{stu.name}</td>
+                <td className="px-4 py-2">{stu.studentId}</td>
+                <td className="px-4 py-2">{stu.class}</td>
+                <td className="px-4 py-2">{stu.guardianEmail}</td>
+                <td className="px-4 py-2">{stu.guardianMobile}</td>
+                <td className="px-4 py-2 text-center space-x-2">
+                  <button onClick={() => handleEdit(stu)}>
+                    <PencilIcon className="w-5 h-5 text-blue-500 hover:text-blue-700" />
+                  </button>
+                  <button onClick={() => handleDelete(stu.id)}>
+                    <span className="text-red-500 hover:text-red-700">✕</span>
+                  </button>
+                </td>
               </tr>
-            </thead>
-            <tbody>
-              {students.map((student, index) => (
-                <tr key={index} className="hover:bg-gray-50">
-                  <td className="py-3 px-4 border-b">{student.name}</td>
-                  <td className="py-3 px-4 border-b">{student.id}</td>
-                  <td className="py-3 px-4 border-b">{student.class}</td>
-                  <td className="py-3 px-4 border-b">
-                    {student.guardianEmail}
-                  </td>
-                  <td className="py-3 px-4 border-b">
-                    {student.guardianMobileNo}
-                  </td>
-                  <td className="py-3 px-4 border-b">
-                    <button className="text-blue-500">
-                      <Image
-                        src="/pencel.png"
-                        alt="Edit"
-                        width={20}
-                        height={20}
-                      />
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+            ))}
+          </tbody>
+        </table>
+      </div>
 
-          {/* Pagination */}
-          <div className="flex justify-between items-center p-4 bg-gray-50 border-t">
-            <div>
-              <select className="border rounded px-3 py-2">
-                <option>10</option>
-                <option>20</option>
-                <option>30</option>
-              </select>
-            </div>
-            <div>
-              <span className="text-sm text-gray-600">
-                Showing 1 to 10 out of 10 records
-              </span>
-            </div>
-            <div className="flex space-x-2">
-              {[1, 2, 3, 4].map((page) => (
-                <button
-                  key={page}
-                  className={`border rounded px-3 py-2 ${
-                    page === 1
-                      ? "bg-purple-500 text-white"
-                      : "hover:bg-purple-500 hover:text-white"
-                  }`}
-                >
-                  {page}
+      {/* Modal Form */}
+      {isFormOpen && (
+        <>
+          <div
+            className="fixed inset-0 bg-black bg-opacity-70 z-10 backdrop-blur-sm"
+            onClick={() => setIsFormOpen(false)}
+          />
+          <div className="fixed inset-0 flex items-center justify-center z-20">
+            <div className="bg-white rounded-xl shadow-2xl w-[90%] max-w-md p-8 relative">
+              <button
+                className="absolute top-4 right-4 text-gray-500 hover:text-gray-700"
+                onClick={() => setIsFormOpen(false)}
+              >
+                ✕
+              </button>
+              <h3 className="text-2xl font-bold text-center mb-2">
+                {formData.id ? "Edit Student" : "Add New Student"}
+              </h3>
+              <form onSubmit={handleSubmit} className="space-y-4 max-h-[70vh] overflow-y-auto">
+                <div>
+                  <label className="block mb-1">Name</label>
+                  <input
+                    name="name"
+                    value={formData.name}
+                    onChange={handleInputChange}
+                    className="w-full border rounded px-3 py-2"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block mb-1">Student ID</label>
+                  <input
+                    name="studentId"
+                    value={formData.studentId}
+                    onChange={handleInputChange}
+                    className="w-full border rounded px-3 py-2"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block mb-1">Password</label>
+                  <input
+                    name="password"
+                    type="password"
+                    value={formData.password}
+                    onChange={handleInputChange}
+                    className="w-full border rounded px-3 py-2"
+                    {...(formData.id ? {} : { required: true })}
+                  />
+                </div>
+                <div>
+                  <label className="block mb-1">Class</label>
+                  <select
+                    name="class"
+                    value={formData.class}
+                    onChange={handleInputChange}
+                    className="w-full border rounded px-3 py-2"
+                    required
+                  >
+                    <option value="" disabled>Select Class</option>
+                    <option value="1">1</option>
+                    <option value="2">2</option>
+                    <option value="3">3</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block mb-1">Guardian Email</label>
+                  <input
+                    name="guardianEmail"
+                    type="email"
+                    value={formData.guardianEmail}
+                    onChange={handleInputChange}
+                    className="w-full border rounded px-3 py-2"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block mb-1">Guardian Mobile</label>
+                  <input
+                    name="guardianMobile"
+                    value={formData.guardianMobile}
+                    onChange={handleInputChange}
+                    className="w-full border rounded px-3 py-2"
+                    required
+                  />
+                </div>
+                <button className="w-full py-2 rounded bg-gradient-to-r from-purple-500 to-blue-500 text-white">
+                  {formData.id ? "Update" : "Add"}
                 </button>
-              ))}
+              </form>
             </div>
           </div>
-        </div>
-      </main>
-    </div>
+        </>
+      )}
+    </Layout>
   );
 };
 
